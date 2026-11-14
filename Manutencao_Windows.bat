@@ -26,7 +26,7 @@
 chcp 65001 >nul
 setlocal EnableDelayedExpansion
 title Central de Manutenção do Windows
-mode con: cols=75 lines=28
+mode con: cols=80 lines=32
 
 :: ========================================================
 :: DEFINICAO DE CORES ANSI E ESTILOS
@@ -42,7 +42,7 @@ set "YELLOW=%ESC%[93m"
 set "RED=%ESC%[91m"
 set "GRAY=%ESC%[90m"
 
-set "SEP=─────────────────────────────────────────────────────────────"
+set "SEP=───────────────────────────────────────────────────────────────"
 
 :: ========================================================
 :: 1. VERIFICACAO DE ADMINISTRADOR
@@ -51,11 +51,11 @@ net session >nul 2>&1
 if %errorlevel% neq 0 (
     cls
     echo.
-    echo  %RED%%SEP%%RESET%
-    echo   %BOLD%%RED%ACESSO NEGADO%RESET% - Privilégios de Administrador necessários.
-    echo  %RED%%SEP%%RESET%
+    echo   %RED%%SEP%%RESET%
+    echo    %BOLD%%RED%ACESSO NEGADO%RESET% - Privilégios de Administrador necessários.
+    echo   %RED%%SEP%%RESET%
     echo.
-    echo   Solicitando permissões de Administrador...
+    echo    Solicitando permissões de Administrador...
     echo.
     powershell -NoProfile -Command "Start-Process -FilePath '%~f0' -Verb RunAs"
     exit /b
@@ -77,24 +77,28 @@ echo ============================================== >> "%LOG%"
 :Menu
 cls
 echo.
-echo  %CYAN%%SEP%%RESET%
-echo   %BOLD%%WHITE%Central de Manutenção do Windows%RESET%               %GRAY%v1.0.0%RESET%
-echo  %CYAN%%SEP%%RESET%
-echo   %GRAY%Log: %LOG%%RESET%
+echo   %CYAN%%SEP%%RESET%
+echo    %BOLD%%WHITE%Central de Manutenção do Windows%RESET%                      %GRAY%v1.0.0%RESET%
+echo   %CYAN%%SEP%%RESET%
 echo.
-echo   %CYAN%[1]%RESET% %BOLD%Manutenção Completa%RESET% %GRAY%(todos os módulos)%RESET%
+echo    %GRAY%Log:%RESET% %CYAN%%LOG%%RESET%
 echo.
-echo   %CYAN%[2]%RESET% Limpeza de Temporários do Usuário
-echo   %CYAN%[3]%RESET% Limpeza de Temporários do Windows
-echo   %CYAN%[4]%RESET% Otimização de Componentes (DISM)
-echo   %CYAN%[5]%RESET% Reparo de Imagem do Sistema (DISM)
-echo   %CYAN%[6]%RESET% Verificação de Integridade (SFC)
+echo    %BOLD%%WHITE%FLUXO COMPLETO:%RESET%
+echo    %CYAN%[1]%RESET%  %BOLD%Manutenção Completa%RESET%  %GRAY%- executa todos os módulos%RESET%
 echo.
-echo  %GRAY%%SEP%%RESET%
-echo   %RED%[0]%RESET% %GRAY%Sair%RESET%
-echo  %GRAY%%SEP%%RESET%
+echo    %BOLD%%WHITE%MÓDULOS INDIVIDUAIS:%RESET%
+echo    %CYAN%[2]%RESET%  Limpeza de Temporários do Usuário
+echo    %CYAN%[3]%RESET%  Limpeza de Temporários do Windows
+echo    %CYAN%[4]%RESET%  Otimização de Componentes - DISM
+echo    %CYAN%[5]%RESET%  Reparo de Imagem do Sistema - DISM
+echo    %CYAN%[6]%RESET%  Verificação de Integridade - SFC
 echo.
-choice /c 1234560 /n /m "%ESC%[96mEscolha uma opção [0-6]: %ESC%[0m"
+echo   %GRAY%%SEP%%RESET%
+echo    %RED%[0]%RESET%  %GRAY%Sair%RESET%
+echo   %GRAY%%SEP%%RESET%
+echo.
+<nul set /p "=   %CYAN%Escolha uma opção [0-6]: %RESET%"
+choice /c 1234560 /n >nul
 
 if errorlevel 7 goto :Encerrar
 if errorlevel 6 goto :ApenasSFC
@@ -111,9 +115,10 @@ if errorlevel 1 goto :RotinaCompleta
 :RotinaCompleta
 cls
 echo.
-echo  %CYAN%%SEP%%RESET%
-echo   %BOLD%%WHITE%Iniciando Manutenção Completa%RESET%
-echo  %CYAN%%SEP%%RESET%
+echo   %CYAN%%SEP%%RESET%
+echo    %BOLD%%WHITE%Iniciando Manutenção Completa%RESET%
+echo   %CYAN%%SEP%%RESET%
+echo.
 timeout /t 1 >nul
 call :Executar_TempUser
 call :Executar_TempWin
@@ -149,134 +154,169 @@ goto :Finalizacao
 :Executar_TempUser
 cls
 echo.
-echo  %CYAN%%SEP%%RESET%
-echo   %BOLD%%WHITE%[1/5] Limpeza de Temporários do Usuário%RESET%
-echo  %CYAN%%SEP%%RESET%
-echo   Remove caches e arquivos residuais da pasta %%TEMP%%.
+echo   %CYAN%%SEP%%RESET%
+echo    %BOLD%%WHITE%[1/5] Limpeza de Temporários do Usuário%RESET%
+echo   %CYAN%%SEP%%RESET%
 echo.
-choice /c SN /m "%ESC%[93mExecutar esta etapa? [S/N]: %ESC%[0m"
+echo    Remove arquivos residuais e caches da pasta %%TEMP%%.
+echo.
+<nul set /p "=   %YELLOW%Executar esta etapa? [S/N]: %RESET%"
+choice /c SN /n >nul
 if errorlevel 2 (
+    echo Não
     echo.
-    echo   %YELLOW%[PULADO]%RESET% %GRAY%Etapa ignorada.%RESET%
+    echo    %YELLOW%[PULADO]%RESET% %GRAY%Etapa ignorada.%RESET%
     echo [PULADO] Temporários do usuário >> "%LOG%"
     timeout /t 1 >nul
     exit /b
 )
+echo Sim
 echo.
-echo   %CYAN%[%RESET%...%CYAN%]%RESET% Limpando arquivos temporários...
+echo    %CYAN%[ ... ]%RESET% Limpando arquivos temporários...
 echo [1/5] Temporários do usuário - Início: %time% >> "%LOG%"
 del /f /s /q "%TEMP%\*" >> "%LOG%" 2>&1
 echo [1/5] Concluído >> "%LOG%"
-echo   %GREEN%[ OK ]%RESET% Limpeza concluída com sucesso!
+echo    %GREEN%[ OK  ]%RESET% Limpeza concluída com sucesso!
 echo.
-pause
+echo   %GRAY%%SEP%%RESET%
+<nul set /p "=   %GRAY%Pressione qualquer tecla para continuar...%RESET%"
+pause >nul
+echo.
 exit /b
 
 :Executar_TempWin
 cls
 echo.
-echo  %CYAN%%SEP%%RESET%
-echo   %BOLD%%WHITE%[2/5] Limpeza de Temporários do Windows%RESET%
-echo  %CYAN%%SEP%%RESET%
-echo   Remove arquivos temporários e instaladores em C:\Windows\Temp.
+echo   %CYAN%%SEP%%RESET%
+echo    %BOLD%%WHITE%[2/5] Limpeza de Temporários do Windows%RESET%
+echo   %CYAN%%SEP%%RESET%
 echo.
-choice /c SN /m "%ESC%[93mExecutar esta etapa? [S/N]: %ESC%[0m"
+echo    Remove instaladores e arquivos temporários em C:\Windows\Temp.
+echo.
+<nul set /p "=   %YELLOW%Executar esta etapa? [S/N]: %RESET%"
+choice /c SN /n >nul
 if errorlevel 2 (
+    echo Não
     echo.
-    echo   %YELLOW%[PULADO]%RESET% %GRAY%Etapa ignorada.%RESET%
+    echo    %YELLOW%[PULADO]%RESET% %GRAY%Etapa ignorada.%RESET%
     echo [PULADO] Temporários do Windows >> "%LOG%"
     timeout /t 1 >nul
     exit /b
 )
+echo Sim
 echo.
-echo   %CYAN%[%RESET%...%CYAN%]%RESET% Limpando arquivos do sistema...
+echo    %CYAN%[ ... ]%RESET% Limpando arquivos do sistema...
 echo [2/5] Temporários do Windows - Início: %time% >> "%LOG%"
 del /f /s /q "%windir%\Temp\*" >> "%LOG%" 2>&1
 echo [2/5] Concluído >> "%LOG%"
-echo   %GREEN%[ OK ]%RESET% Limpeza concluída com sucesso!
+echo    %GREEN%[ OK  ]%RESET% Limpeza concluída com sucesso!
 echo.
-pause
+echo   %GRAY%%SEP%%RESET%
+<nul set /p "=   %GRAY%Pressione qualquer tecla para continuar...%RESET%"
+pause >nul
+echo.
 exit /b
 
 :Executar_DISMCleanup
 cls
 echo.
-echo  %CYAN%%SEP%%RESET%
-echo   %BOLD%%WHITE%[3/5] Otimização de Componentes (DISM)%RESET%
-echo  %CYAN%%SEP%%RESET%
-echo   Limpa versões obsoletas na pasta WinSxS (Windows Update).
-echo   %GRAY%Tempo estimado: 3 a 8 minutos.%RESET%
+echo   %CYAN%%SEP%%RESET%
+echo    %BOLD%%WHITE%[3/5] Otimização de Componentes (DISM)%RESET%
+echo   %CYAN%%SEP%%RESET%
 echo.
-choice /c SN /m "%ESC%[93mExecutar esta etapa? [S/N]: %ESC%[0m"
+echo    Limpa versões obsoletas de componentes da pasta WinSxS.
+echo    %GRAY%Tempo estimado: 3 a 8 minutos.%RESET%
+echo.
+<nul set /p "=   %YELLOW%Executar esta etapa? [S/N]: %RESET%"
+choice /c SN /n >nul
 if errorlevel 2 (
+    echo Não
     echo.
-    echo   %YELLOW%[PULADO]%RESET% %GRAY%Etapa ignorada.%RESET%
+    echo    %YELLOW%[PULADO]%RESET% %GRAY%Etapa ignorada.%RESET%
     echo [PULADO] DISM StartComponentCleanup >> "%LOG%"
     timeout /t 1 >nul
     exit /b
 )
+echo Sim
 echo.
-echo   %CYAN%[%RESET%...%CYAN%]%RESET% Otimizando componentes (aguarde alguns minutos)...
+echo    %CYAN%[ ... ]%RESET% Otimizando componentes (aguarde alguns minutos)...
 echo [3/5] DISM StartComponentCleanup - Início: %time% >> "%LOG%"
 DISM /Online /Cleanup-Image /StartComponentCleanup >> "%LOG%" 2>&1
 echo [3/5] Concluído >> "%LOG%"
-echo   %GREEN%[ OK ]%RESET% Otimização finalizada com sucesso!
+echo    %GREEN%[ OK  ]%RESET% Otimização finalizada com sucesso!
 echo.
-pause
+echo   %GRAY%%SEP%%RESET%
+<nul set /p "=   %GRAY%Pressione qualquer tecla para continuar...%RESET%"
+pause >nul
+echo.
 exit /b
 
 :Executar_DISMRestore
 cls
 echo.
-echo  %CYAN%%SEP%%RESET%
-echo   %BOLD%%WHITE%[4/5] Reparo de Imagem do Sistema (DISM)%RESET%
-echo  %CYAN%%SEP%%RESET%
-echo   Verifica e repara a imagem do sistema via Windows Update.
-echo   %GRAY%Requer conexão com a internet. Tempo: 10 a 20 minutos.%RESET%
+echo   %CYAN%%SEP%%RESET%
+echo    %BOLD%%WHITE%[4/5] Reparo de Imagem do Sistema (DISM)%RESET%
+echo   %CYAN%%SEP%%RESET%
 echo.
-choice /c SN /m "%ESC%[93mExecutar esta etapa? [S/N]: %ESC%[0m"
+echo    Verifica e repara a imagem do sistema via Windows Update.
+echo    %GRAY%Requer internet. Tempo estimado: 10 a 20 minutos.%RESET%
+echo.
+<nul set /p "=   %YELLOW%Executar esta etapa? [S/N]: %RESET%"
+choice /c SN /n >nul
 if errorlevel 2 (
+    echo Não
     echo.
-    echo   %YELLOW%[PULADO]%RESET% %GRAY%Etapa ignorada.%RESET%
+    echo    %YELLOW%[PULADO]%RESET% %GRAY%Etapa ignorada.%RESET%
     echo [PULADO] DISM RestoreHealth >> "%LOG%"
     timeout /t 1 >nul
     exit /b
 )
+echo Sim
 echo.
-echo   %CYAN%[%RESET%...%CYAN%]%RESET% Verificando e reparando imagem do Windows...
+echo    %CYAN%[ ... ]%RESET% Verificando e reparando imagem do Windows...
 echo [4/5] DISM RestoreHealth - Início: %time% >> "%LOG%"
 DISM /Online /Cleanup-Image /RestoreHealth >> "%LOG%" 2>&1
 echo [4/5] Concluído >> "%LOG%"
-echo   %GREEN%[ OK ]%RESET% Reparo de imagem concluído!
+echo    %GREEN%[ OK  ]%RESET% Reparo de imagem concluído!
 echo.
-pause
+echo   %GRAY%%SEP%%RESET%
+<nul set /p "=   %GRAY%Pressione qualquer tecla para continuar...%RESET%"
+pause >nul
+echo.
 exit /b
 
 :Executar_SFC
 cls
 echo.
-echo  %CYAN%%SEP%%RESET%
-echo   %BOLD%%WHITE%[5/5] Verificação de Integridade (SFC)%RESET%
-echo  %CYAN%%SEP%%RESET%
-echo   Escaneia e restaura arquivos essenciais corrompidos do Windows.
-echo   %GRAY%Tempo estimado: 5 a 15 minutos.%RESET%
+echo   %CYAN%%SEP%%RESET%
+echo    %BOLD%%WHITE%[5/5] Verificação de Integridade (SFC)%RESET%
+echo   %CYAN%%SEP%%RESET%
 echo.
-choice /c SN /m "%ESC%[93mExecutar esta etapa? [S/N]: %ESC%[0m"
+echo    Escaneia e restaura arquivos essenciais corrompidos do Windows.
+echo    %GRAY%Tempo estimado: 5 a 15 minutos.%RESET%
+echo.
+<nul set /p "=   %YELLOW%Executar esta etapa? [S/N]: %RESET%"
+choice /c SN /n >nul
 if errorlevel 2 (
+    echo Não
     echo.
-    echo   %YELLOW%[PULADO]%RESET% %GRAY%Etapa ignorada.%RESET%
+    echo    %YELLOW%[PULADO]%RESET% %GRAY%Etapa ignorada.%RESET%
     echo [PULADO] SFC Scannow >> "%LOG%"
     timeout /t 1 >nul
     exit /b
 )
+echo Sim
 echo.
-echo   %CYAN%[%RESET%...%CYAN%]%RESET% Verificando arquivos protegidos do sistema...
+echo    %CYAN%[ ... ]%RESET% Verificando arquivos protegidos do sistema...
 echo [5/5] SFC Scannow - Início: %time% >> "%LOG%"
 sfc /scannow >> "%LOG%" 2>&1
 echo [5/5] Concluído >> "%LOG%"
-echo   %GREEN%[ OK ]%RESET% Verificação finalizada com sucesso!
+echo    %GREEN%[ OK  ]%RESET% Verificação finalizada com sucesso!
 echo.
-pause
+echo   %GRAY%%SEP%%RESET%
+<nul set /p "=   %GRAY%Pressione qualquer tecla para continuar...%RESET%"
+pause >nul
+echo.
 exit /b
 
 :: ========================================================
@@ -285,22 +325,23 @@ exit /b
 :Finalizacao
 cls
 echo.
-echo  %GREEN%%SEP%%RESET%
-echo   %BOLD%%GREEN%Manutenção Finalizada com Sucesso!%RESET%
-echo  %GREEN%%SEP%%RESET%
+echo   %GREEN%%SEP%%RESET%
+echo    %BOLD%%GREEN%Manutenção Finalizada com Sucesso!%RESET%
+echo   %GREEN%%SEP%%RESET%
 echo.
-echo   Relatório salvo em:
-echo   %CYAN%%LOG%%RESET%
+echo    Relatório salvo em:
+echo    %CYAN%%LOG%%RESET%
 echo.
 echo Fim: %date% %time% >> "%LOG%"
-choice /c SN /m "%ESC%[96mVoltar ao menu principal? [S/N]: %ESC%[0m"
+<nul set /p "=   %CYAN%Voltar ao menu principal? [S/N]: %RESET%"
+choice /c SN /n >nul
 if errorlevel 2 goto :Encerrar
 goto :Menu
 
 :Encerrar
 cls
 echo.
-echo   %GRAY%Saindo da Central de Manutenção...%RESET%
+echo    %GRAY%Saindo da Central de Manutenção...%RESET%
 echo.
 timeout /t 1 >nul
 exit
