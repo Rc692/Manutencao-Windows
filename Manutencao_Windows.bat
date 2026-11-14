@@ -1,3 +1,27 @@
+:: ################################################################
+:: ##               Central de Manutenção Windows                ##
+:: ################################################################
+:: # Author:  https://github.com/Rc692
+:: # Repo:    https://github.com/Rc692/Manutencao-Windows
+:: # SPDX-License-Identifier: MIT
+:: # Version: 1.0.0
+:: #
+:: # Script interativo para manutenção, limpeza de temporários,
+:: # otimização e verificação de integridade do Windows via CLI.
+:: # Utiliza apenas comandos e ferramentas nativas do sistema.
+:: #
+:: # Recursos e Módulos:
+:: #   - Auto-elevação para privilégios de Administrador (UAC)
+:: #   - Limpeza de arquivos temporários do usuário (%TEMP%)
+:: #   - Limpeza de arquivos temporários do Windows (C:\Windows\Temp)
+:: #   - Limpeza de componentes antigos (DISM StartComponentCleanup)
+:: #   - Reparo da imagem do sistema (DISM RestoreHealth)
+:: #   - Verificação e restauração de arquivos protegidos (SFC /scannow)
+:: #
+:: # Registro de Execução (Log gerado automaticamente):
+:: #   %USERPROFILE%\Desktop\Manutencao_YYYYMMDD_HHMMSS.log
+:: ################################################################
+
 @echo off
 chcp 65001 >nul
 setlocal EnableDelayedExpansion
