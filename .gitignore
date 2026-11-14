@@ -1,0 +1,13 @@
+# Logs gerados pelas execuções
+*.log
+*.tmp
+*.bak
+
+# Arquivos do sistema operacional
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Pastas de IDEs ou editores
+.vscode/
+.idea/
