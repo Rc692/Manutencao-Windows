@@ -4,17 +4,18 @@
 :: # Author:  https://github.com/Rc692
 :: # Repo:    https://github.com/Rc692/Manutencao-Windows
 :: # SPDX-License-Identifier: MIT
-:: # Version: 2.1.0
+:: # Version: 2.2.0
 :: #
 :: # Script interativo para suporte, limpeza e manutenção do Windows
 :: # Utiliza apenas comandos e ferramentas nativas do sistema.
 :: ################################################################
 
 @echo off
+setlocal EnableDelayedExpansion
 chcp 65001 >nul
 cd /d "%~dp0"
 title Central de Manutenção do Windows
-mode con: cols=75 lines=33
+mode con: cols=75 lines=36
 color 0B
 
 :: 1. VERIFICACAO DE ADMINISTRADOR
@@ -71,12 +72,14 @@ echo    DESEMPENHO E REDE
 echo      [8]  Otimizacao TRIM de SSD e Desfragmentacao de HDD
 echo      [9]  Varredura Online de Integridade do Disco (CHKDSK)
 echo      [10] Limpeza do Cache de Rede e DNS (FlushDNS)
+echo      [11] Diagnostico de Rede e Latencia (Ping, Jitter e Rota)
+echo      [12] Redefinir Catalogo Winsock e Pilha TCP/IP (Reset)
 echo.
 echo      [0]  Sair
 echo.
 echo  +--------------------------------------------------------------+
 set "opcao="
-set /p "opcao=  Escolha uma opcao [1-10, 0]: "
+set /p "opcao=  Escolha uma opcao [1-12, 0]: "
 
 if "%opcao%"=="1" goto rotina_completa
 if "%opcao%"=="2" goto mod_temp
@@ -88,6 +91,8 @@ if "%opcao%"=="7" goto mod_dism_cleanup
 if "%opcao%"=="8" goto mod_defrag
 if "%opcao%"=="9" goto mod_chkdsk
 if "%opcao%"=="10" goto mod_dns
+if "%opcao%"=="11" goto mod_diagnostico_rede
+if "%opcao%"=="12" goto mod_reset_winsock
 if "%opcao%"=="0" goto sair
 echo.
 echo  Opcao invalida. Tente novamente.
@@ -140,24 +145,29 @@ echo.
 echo  +--------------------------------------------------------------+
 set "confirma="
 set /p "confirma=  Executar esta etapa agora? [S/N]: "
-if /i "%confirma%"=="S" (
-    echo.
-    echo  Limpando arquivos e pastas temporarias...
-    echo [Temporarios] Inicio: %time% >> "%LOG%"
-    del /f /s /q "%TEMP%\*" >> "%LOG%" 2>&1
-    for /d %%D in ("%TEMP%\*") do rd /s /q "%%D" >> "%LOG%" 2>&1
-    del /f /s /q "%windir%\Temp\*" >> "%LOG%" 2>&1
-    for /d %%D in ("%windir%\Temp\*") do rd /s /q "%%D" >> "%LOG%" 2>&1
-    echo [Temporarios] Concluido >> "%LOG%"
-    color 0A
-    echo.
-    echo  Limpeza de temporarios concluida com sucesso!
-) else (
+if /i not "%confirma%"=="S" (
     color 0E
     echo.
     echo  Etapa pulada pelo usuario.
     echo [PULADO] Temporarios >> "%LOG%"
+    echo.
+    pause
+    color 0B
+    if "%fluxo_completo%"=="1" exit /b
+    goto menu
 )
+
+echo.
+echo  Limpando arquivos e pastas temporarias...
+echo [Temporarios] Inicio: %time% >> "%LOG%"
+del /f /s /q "%TEMP%\*" >> "%LOG%" 2>&1
+for /d %%D in ("%TEMP%\*") do rd /s /q "%%D" >> "%LOG%" 2>&1
+del /f /s /q "%windir%\Temp\*" >> "%LOG%" 2>&1
+for /d %%D in ("%windir%\Temp\*") do rd /s /q "%%D" >> "%LOG%" 2>&1
+echo [Temporarios] Concluido >> "%LOG%"
+color 0A
+echo.
+echo  Limpeza de temporarios concluida com sucesso!
 echo.
 pause
 color 0B
@@ -179,27 +189,32 @@ echo.
 echo  +--------------------------------------------------------------+
 set "confirma="
 set /p "confirma=  Executar esta etapa agora? [S/N]: "
-if /i "%confirma%"=="S" (
-    echo.
-    echo  Pausando servicos de atualizacao...
-    net stop wuauserv >> "%LOG%" 2>&1
-    net stop bits >> "%LOG%" 2>&1
-    echo  Apagando arquivos de cache do Windows Update...
-    del /f /s /q "%windir%\SoftwareDistribution\Download\*.*" >> "%LOG%" 2>&1
-    for /d %%D in ("%windir%\SoftwareDistribution\Download\*") do rd /s /q "%%D" >> "%LOG%" 2>&1
-    echo  Reiniciando servicos de atualizacao...
-    net start bits >> "%LOG%" 2>&1
-    net start wuauserv >> "%LOG%" 2>&1
-    echo [Windows Update Cache] Concluido >> "%LOG%"
-    color 0A
-    echo.
-    echo  Limpeza do cache do Windows Update concluida!
-) else (
+if /i not "%confirma%"=="S" (
     color 0E
     echo.
     echo  Etapa pulada pelo usuario.
     echo [PULADO] Windows Update Cache >> "%LOG%"
+    echo.
+    pause
+    color 0B
+    if "%fluxo_completo%"=="1" exit /b
+    goto menu
 )
+
+echo.
+echo  Pausando servicos de atualizacao...
+net stop wuauserv >> "%LOG%" 2>&1
+net stop bits >> "%LOG%" 2>&1
+echo  Apagando arquivos de cache do Windows Update...
+del /f /s /q "%windir%\SoftwareDistribution\Download\*.*" >> "%LOG%" 2>&1
+for /d %%D in ("%windir%\SoftwareDistribution\Download\*") do rd /s /q "%%D" >> "%LOG%" 2>&1
+echo  Reiniciando servicos de atualizacao...
+net start bits >> "%LOG%" 2>&1
+net start wuauserv >> "%LOG%" 2>&1
+echo [Windows Update Cache] Concluido >> "%LOG%"
+color 0A
+echo.
+echo  Limpeza do cache do Windows Update concluida!
 echo.
 pause
 color 0B
@@ -219,21 +234,26 @@ echo.
 echo  +--------------------------------------------------------------+
 set "confirma="
 set /p "confirma=  Executar esta etapa agora? [S/N]: "
-if /i "%confirma%"=="S" (
-    echo.
-    echo  Esvaziando lixeira de todas as unidades...
-    echo [Lixeira] Inicio: %time% >> "%LOG%"
-    powershell -NoProfile -Command "Clear-RecycleBin -Force -ErrorAction SilentlyContinue" >> "%LOG%" 2>&1
-    echo [Lixeira] Concluido >> "%LOG%"
-    color 0A
-    echo.
-    echo  Lixeira esvaziada com sucesso!
-) else (
+if /i not "%confirma%"=="S" (
     color 0E
     echo.
     echo  Etapa pulada pelo usuario.
     echo [PULADO] Lixeira >> "%LOG%"
+    echo.
+    pause
+    color 0B
+    if "%fluxo_completo%"=="1" exit /b
+    goto menu
 )
+
+echo.
+echo  Esvaziando lixeira de todas as unidades...
+echo [Lixeira] Inicio: %time% >> "%LOG%"
+powershell -NoProfile -Command "Clear-RecycleBin -Force -ErrorAction SilentlyContinue" >> "%LOG%" 2>&1
+echo [Lixeira] Concluido >> "%LOG%"
+color 0A
+echo.
+echo  Lixeira esvaziada com sucesso!
 echo.
 pause
 color 0B
@@ -254,21 +274,26 @@ echo.
 echo  +--------------------------------------------------------------+
 set "confirma="
 set /p "confirma=  Executar esta etapa agora? [S/N]: "
-if /i "%confirma%"=="S" (
-    echo.
-    echo  Verificando e reparando imagem do Windows - aguarde...
-    echo [DISM RestoreHealth] Inicio: %time% >> "%LOG%"
-    DISM /Online /Cleanup-Image /RestoreHealth >> "%LOG%" 2>&1
-    echo [DISM RestoreHealth] Concluido >> "%LOG%"
-    color 0A
-    echo.
-    echo  Reparo de imagem concluido com sucesso!
-) else (
+if /i not "%confirma%"=="S" (
     color 0E
     echo.
     echo  Etapa pulada pelo usuario.
     echo [PULADO] DISM RestoreHealth >> "%LOG%"
+    echo.
+    pause
+    color 0B
+    if "%fluxo_completo%"=="1" exit /b
+    goto menu
 )
+
+echo.
+echo  Verificando e reparando imagem do Windows - aguarde...
+echo [DISM RestoreHealth] Inicio: %time% >> "%LOG%"
+DISM /Online /Cleanup-Image /RestoreHealth >> "%LOG%" 2>&1
+echo [DISM RestoreHealth] Concluido >> "%LOG%"
+color 0A
+echo.
+echo  Reparo de imagem concluido com sucesso!
 echo.
 pause
 color 0B
@@ -289,21 +314,26 @@ echo.
 echo  +--------------------------------------------------------------+
 set "confirma="
 set /p "confirma=  Executar esta etapa agora? [S/N]: "
-if /i "%confirma%"=="S" (
-    echo.
-    echo  Escaneando integridade dos arquivos do sistema...
-    echo [SFC Scannow] Inicio: %time% >> "%LOG%"
-    sfc /scannow >> "%LOG%" 2>&1
-    echo [SFC Scannow] Concluido >> "%LOG%"
-    color 0A
-    echo.
-    echo  Varredura do SFC finalizada com sucesso!
-) else (
+if /i not "%confirma%"=="S" (
     color 0E
     echo.
     echo  Etapa pulada pelo usuario.
     echo [PULADO] SFC Scannow >> "%LOG%"
+    echo.
+    pause
+    color 0B
+    if "%fluxo_completo%"=="1" exit /b
+    goto menu
 )
+
+echo.
+echo  Escaneando integridade dos arquivos do sistema...
+echo [SFC Scannow] Inicio: %time% >> "%LOG%"
+sfc /scannow >> "%LOG%" 2>&1
+echo [SFC Scannow] Concluido >> "%LOG%"
+color 0A
+echo.
+echo  Varredura do SFC finalizada com sucesso!
 echo.
 pause
 color 0B
@@ -324,21 +354,26 @@ echo.
 echo  +--------------------------------------------------------------+
 set "confirma="
 set /p "confirma=  Executar esta etapa agora? [S/N]: "
-if /i "%confirma%"=="S" (
-    echo.
-    echo  Otimizando componentes - aguarde alguns minutos...
-    echo [DISM StartComponentCleanup] Inicio: %time% >> "%LOG%"
-    DISM /Online /Cleanup-Image /StartComponentCleanup >> "%LOG%" 2>&1
-    echo [DISM StartComponentCleanup] Concluido >> "%LOG%"
-    color 0A
-    echo.
-    echo  Otimizacao finalizada com sucesso!
-) else (
+if /i not "%confirma%"=="S" (
     color 0E
     echo.
     echo  Etapa pulada pelo usuario.
     echo [PULADO] DISM StartComponentCleanup >> "%LOG%"
+    echo.
+    pause
+    color 0B
+    if "%fluxo_completo%"=="1" exit /b
+    goto menu
 )
+
+echo.
+echo  Otimizando componentes - aguarde alguns minutos...
+echo [DISM StartComponentCleanup] Inicio: %time% >> "%LOG%"
+DISM /Online /Cleanup-Image /StartComponentCleanup >> "%LOG%" 2>&1
+echo [DISM StartComponentCleanup] Concluido >> "%LOG%"
+color 0A
+echo.
+echo  Otimizacao finalizada com sucesso!
 echo.
 pause
 color 0B
@@ -359,21 +394,26 @@ echo.
 echo  +--------------------------------------------------------------+
 set "confirma="
 set /p "confirma=  Executar esta etapa agora? [S/N]: "
-if /i "%confirma%"=="S" (
-    echo.
-    echo  Otimizando unidade do sistema: %SystemDrive%...
-    echo [Defrag/TRIM] Inicio: %time% >> "%LOG%"
-    defrag %SystemDrive% /O >> "%LOG%" 2>&1
-    echo [Defrag/TRIM] Concluido >> "%LOG%"
-    color 0A
-    echo.
-    echo  Otimizacao da unidade concluida com sucesso!
-) else (
+if /i not "%confirma%"=="S" (
     color 0E
     echo.
     echo  Etapa pulada pelo usuario.
     echo [PULADO] Defrag/TRIM >> "%LOG%"
+    echo.
+    pause
+    color 0B
+    if "%fluxo_completo%"=="1" exit /b
+    goto menu
 )
+
+echo.
+echo  Otimizando unidade do sistema: %SystemDrive%...
+echo [Defrag/TRIM] Inicio: %time% >> "%LOG%"
+defrag %SystemDrive% /O >> "%LOG%" 2>&1
+echo [Defrag/TRIM] Concluido >> "%LOG%"
+color 0A
+echo.
+echo  Otimizacao da unidade concluida com sucesso!
 echo.
 pause
 color 0B
@@ -394,21 +434,26 @@ echo.
 echo  +--------------------------------------------------------------+
 set "confirma="
 set /p "confirma=  Executar esta etapa agora? [S/N]: "
-if /i "%confirma%"=="S" (
-    echo.
-    echo  Realizando varredura online do disco: %SystemDrive%...
-    echo [CHKDSK Scan] Inicio: %time% >> "%LOG%"
-    chkdsk %SystemDrive% /scan >> "%LOG%" 2>&1
-    echo [CHKDSK Scan] Concluido >> "%LOG%"
-    color 0A
-    echo.
-    echo  Varredura de disco finalizada!
-) else (
+if /i not "%confirma%"=="S" (
     color 0E
     echo.
     echo  Etapa pulada pelo usuario.
     echo [PULADO] CHKDSK Scan >> "%LOG%"
+    echo.
+    pause
+    color 0B
+    if "%fluxo_completo%"=="1" exit /b
+    goto menu
 )
+
+echo.
+echo  Realizando varredura online do disco: %SystemDrive%...
+echo [CHKDSK Scan] Inicio: %time% >> "%LOG%"
+chkdsk %SystemDrive% /scan >> "%LOG%" 2>&1
+echo [CHKDSK Scan] Concluido >> "%LOG%"
+color 0A
+echo.
+echo  Varredura de disco finalizada!
 echo.
 pause
 color 0B
@@ -429,23 +474,203 @@ echo.
 echo  +--------------------------------------------------------------+
 set "confirma="
 set /p "confirma=  Executar esta etapa agora? [S/N]: "
-if /i "%confirma%"=="S" (
-    echo.
-    echo  Limpando cache de DNS...
-    echo [FlushDNS] Inicio: %time% >> "%LOG%"
-    ipconfig /flushdns >> "%LOG%" 2>&1
-    echo [FlushDNS] Concluido >> "%LOG%"
-    color 0A
-    echo.
-    echo  Cache de DNS limpo com sucesso!
-) else (
+if /i not "%confirma%"=="S" (
     color 0E
     echo.
     echo  Etapa pulada pelo usuario.
     echo [PULADO] FlushDNS >> "%LOG%"
+    echo.
+    pause
+    color 0B
+    if "%fluxo_completo%"=="1" exit /b
+    goto menu
 )
+
+echo.
+echo  Limpando cache de DNS...
+echo [FlushDNS] Inicio: %time% >> "%LOG%"
+ipconfig /flushdns >> "%LOG%" 2>&1
+echo [FlushDNS] Concluido >> "%LOG%"
+color 0A
+echo.
+echo  Cache de DNS limpo com sucesso!
 echo.
 pause
+color 0B
+if "%fluxo_completo%"=="1" exit /b
+goto menu
+
+:mod_diagnostico_rede
+cls
+color 0B
+echo.
+echo  +--------------------------------------------------------------+
+echo  ^| DIAGNOSTICO DE REDE E LATENCIA (PING, JITTER E ROTAS)         ^|
+echo  +--------------------------------------------------------------+
+echo.
+echo    Descricao: Testa conexao com o roteador local (Gateway),
+echo               mede latencia e perda de pacotes com DNS externos
+echo               (Cloudflare e Google) e mapeia a rota de conexao.
+echo    Beneficio: Identifica instabilidades e lag para jogos online.
+echo    Tempo:     Aproximadamente 1 a 2 minutos.
+echo.
+echo  +--------------------------------------------------------------+
+set "confirma="
+set /p "confirma=  Executar esta etapa agora? [S/N]: "
+if /i not "%confirma%"=="S" (
+    color 0E
+    echo.
+    echo  Etapa pulada pelo usuario.
+    echo [PULADO] Diagnostico de Rede >> "%LOG%"
+    echo.
+    pause
+    color 0B
+    if "%fluxo_completo%"=="1" exit /b
+    goto menu
+)
+
+cls
+color 0B
+echo.
+echo  +--------------------------------------------------------------+
+echo  ^| INICIANDO DIAGNOSTICO DE REDE E LATENCIA                     ^|
+echo  +--------------------------------------------------------------+
+echo.
+echo    [!] O QUE ESTE TESTE FAZ:
+echo    ----------------------------------------------------------
+echo    1. Testa a estabilidade do seu cabo/Wi-Fi ate o roteador local.
+echo    2. Dispara 30 pacotes para Cloudflare (1.1.1.1) medindo perda.
+echo    3. Dispara 15 pacotes para Google (8.8.8.8) para comparacao.
+echo    4. Mapeia saltos (tracert) para achar gargalos na operadora.
+echo.
+echo    [!] REGISTRO EM LOG:
+echo    ----------------------------------------------------------
+echo    - Todos os dados detalhados estao sendo gravados em:
+echo      %LOG%
+echo.
+echo    Tempo estimado: 1 a 2 minutos. Acompanhe abaixo:
+echo  +--------------------------------------------------------------+
+echo.
+
+echo [Diagnostico de Rede] Inicio: %time% >> "%LOG%"
+echo. >> "%LOG%"
+echo ===== CONFIGURACAO DE IP E ADAPTADORES ===== >> "%LOG%"
+ipconfig /all >> "%LOG%" 2>&1
+
+echo  [1/4] Identificando Gateway Local (Roteador)...
+set "GW_MANUT="
+for /f "tokens=3" %%A in ('route print 0.0.0.0 2^>nul ^| findstr /c:" 0.0.0.0 "') do (
+    if not defined GW_MANUT set "GW_MANUT=%%A"
+)
+
+echo. >> "%LOG%"
+echo ===== TESTE DE COMUNICACAO LOCAL (GATEWAY) ===== >> "%LOG%"
+if defined GW_MANUT (
+    echo   -^> Roteador identificado no IP: %GW_MANUT%
+    echo   -^> Disparando 30 pacotes para analise de estabilidade e jitter...
+    echo Gateway: %GW_MANUT% >> "%LOG%"
+    ping -n 30 %GW_MANUT% >> "%LOG%" 2>&1
+    echo   [OK] Teste do roteador local concluido.
+) else (
+    echo   - [!] Gateway padrao nao encontrado automaticamente.
+    echo [!] Gateway padrao nao encontrado. >> "%LOG%"
+)
+
+echo.
+echo  [2/4] Testando latencia e perda na Internet (Cloudflare 1.1.1.1)...
+echo   -^> Disparando 30 pacotes...
+echo. >> "%LOG%"
+echo ===== TESTE DE LATENCIA CLOUDFLARE (1.1.1.1) ===== >> "%LOG%"
+ping -n 30 1.1.1.1 >> "%LOG%" 2>&1
+echo   [OK] Teste Cloudflare concluido.
+
+echo.
+echo  [3/4] Testando latencia com DNS alternativo (Google 8.8.8.8)...
+echo   -^> Disparando 15 pacotes...
+echo. >> "%LOG%"
+echo ===== TESTE DE LATENCIA GOOGLE (8.8.8.8) ===== >> "%LOG%"
+ping -n 15 8.8.8.8 >> "%LOG%" 2>&1
+echo   [OK] Teste Google concluido.
+
+echo.
+echo  [4/4] Mapeando saltos e rotas ate 1.1.1.1 (Tracert)...
+echo   -^> Mapeando intermediarios da sua operadora (aguarde uns instantes)...
+echo. >> "%LOG%"
+echo ===== ROTA A 1.1.1.1 (TRACERT) ===== >> "%LOG%"
+tracert -d -h 20 -w 700 1.1.1.1 >> "%LOG%" 2>&1
+echo   [OK] Rastreamento de rotas concluido.
+
+echo [Diagnostico de Rede] Concluido >> "%LOG%"
+color 0A
+echo.
+echo  +--------------------------------------------------------------+
+echo  ^| DIAGNOSTICO DE REDE FINALIZADO COM SUCESSO!                  ^|
+echo  +--------------------------------------------------------------+
+echo.
+echo    O relatorio detalhado com ping e rotas foi gravado em:
+echo    %LOG%
+echo.
+echo  +--------------------------------------------------------------+
+echo.
+set "abrir_log_rede="
+set /p "abrir_log_rede=  Deseja abrir o arquivo de Log agora? [S/N]: "
+if /i "%abrir_log_rede%"=="S" (
+    start notepad "%LOG%"
+)
+color 0B
+if "%fluxo_completo%"=="1" exit /b
+goto menu
+
+:mod_reset_winsock
+cls
+color 0B
+echo.
+echo  +--------------------------------------------------------------+
+echo  ^| REDEFINIR CATALOGO WINSOCK E PILHA TCP/IP (RESET)            ^|
+echo  +--------------------------------------------------------------+
+echo.
+echo    Descricao: Redefine toda a pilha de rede e o catalogo Winsock.
+echo    Beneficio: Corrige travamentos graves de comunicacao,
+echo               conflitos de VPNs antigas ou perdas misteriosas.
+echo    Atencao:   Requer a reinicializacao do computador para concluir.
+echo.
+echo  +--------------------------------------------------------------+
+set "confirma="
+set /p "confirma=  Executar esta redefinicao agora? [S/N]: "
+if /i not "%confirma%"=="S" (
+    color 0E
+    echo.
+    echo  Etapa pulada pelo usuario.
+    echo [PULADO] Winsock e TCP/IP Reset >> "%LOG%"
+    echo.
+    pause
+    color 0B
+    if "%fluxo_completo%"=="1" exit /b
+    goto menu
+)
+
+echo.
+echo  Redefinindo catalogo Winsock...
+echo [Winsock Reset] Inicio: %time% >> "%LOG%"
+netsh winsock reset >> "%LOG%" 2>&1
+echo  Redefinindo pilha TCP/IP...
+netsh int ip reset >> "%LOG%" 2>&1
+echo [Winsock e TCP/IP Reset] Concluido >> "%LOG%"
+color 0A
+echo.
+echo  Catalogo Winsock e pilha TCP/IP redefinidos com sucesso!
+echo.
+set "reiniciar="
+set /p "reiniciar=  Deseja reiniciar o computador agora? [S/N]: "
+if /i "%reiniciar%"=="S" (
+    shutdown /r /t 5 /c "Reiniciando o computador para aplicar redefinicao de rede..."
+    exit /b 0
+) else (
+    echo.
+    echo  Lembre-se de reiniciar manualmente mais tarde para aplicar as mudancas.
+    echo.
+    pause
+)
 color 0B
 if "%fluxo_completo%"=="1" exit /b
 goto menu

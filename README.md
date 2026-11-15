@@ -22,9 +22,29 @@ Script interativo via linha de comando para limpeza, integridade, reparo e otimi
     8. **Otimização TRIM / Defrag**: Otimiza SSDs com comando TRIM e desfragmenta HDDs.
     9. **Varredura Online de Disco (CHKDSK /scan)**: Analisa integridade do NTFS sem reiniciar o PC.
     10. **Limpeza de Cache DNS**: Resolve problemas de resolução de nomes e navegação.
+    11. **Diagnóstico de Rede e Latência**: Mede estabilidade local (Gateway), internet (Cloudflare/Google) e rotas (Tracert) para jogos.
+    12. **Redefinir Winsock e Pilha TCP/IP**: Corrige falhas severas de rede e conflitos com opção de reinício assistido.
 - **Geração de Log**: Salva relatório detalhado na Área de Trabalho ao término (`Manutencao_YYYYMMDD_HHMMSS.log`).
 
 ### Como Executar:
 1. Clique duas vezes no arquivo `Manutencao_Windows.bat` (ou execute pelo terminal).
 2. Conceda a permissão de Administrador quando solicitado.
 3. Digite o número da opção desejada e pressione Enter.
+
+---
+
+## 🎮 Diagnostico_Rede_Jogos.bat
+
+Script especializado para testes de latência, estabilidade (jitter), perda de pacotes e reparo de pilha de rede para jogos online no Windows 11.
+
+### Recursos:
+- **Auto-elevação UAC**: Solicita automaticamente privilégios administrativos.
+- **Diagnóstico Completo**:
+  - Testa comunicação local com o Gateway padrão (roteador) com 30 disparos.
+  - Testa latência e perda externa com Cloudflare (`1.1.1.1`) e Google (`8.8.8.8`).
+  - Mapeia saltos de rota com `tracert` para identificar engargalos na operadora.
+  - Salva relatório formatado direto na Área de Trabalho (`Diagnostico_Rede_Jogos.txt`).
+- **Limpeza Rápida de Cache DNS**: `ipconfig /flushdns`.
+- **Renovação de IP**: FlushDNS + Release + Renew de concessão DHCP.
+- **Restauração de Rede (Winsock + TCP/IP)**: Redefine catálogos e pilha de rede com opção de reinício assistido.
+
